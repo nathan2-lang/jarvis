@@ -7,23 +7,45 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: unzip -qo '*.zip'
-      - name: Telecharger le modele du mot de reveil
+
+      - name: Decompresser le projet le plus recent
         run: |
-          curl -L -o /tmp/model.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+          ZIP=$(ls *.zip | sort -V | tail -n 1)
+          echo "Projet utilise : $ZIP"
+          unzip -qo "$ZIP"
+
+      - name: Cache du modele du mot de reveil
+        id: model-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/model-en
+          key: vosk-model-small-en-us-0.15
+
+      - name: Telecharger le modele du mot de reveil
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fL --retry 3 -o /tmp/model.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
           unzip -q /tmp/model.zip -d /tmp/model
+          mv /tmp/model/vosk-model-small-en-us-0.15 /tmp/model-en
+
+      - name: Installer le modele dans le projet
+        run: |
           mkdir -p jarvis/app/src/main/assets
-          mv /tmp/model/vosk-model-small-en-us-0.15 jarvis/app/src/main/assets/model-en
+          cp -r /tmp/model-en jarvis/app/src/main/assets/model-en
           date +%s > jarvis/app/src/main/assets/model-en/uuid
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
+
       - run: gradle assembleDebug
         working-directory: jarvis
+
       - uses: actions/upload-artifact@v4
         with:
           name: jarvis-apk
