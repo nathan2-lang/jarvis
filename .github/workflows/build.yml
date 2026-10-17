@@ -8,6 +8,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: unzip -qo '*.zip'
+      - name: Telecharger le modele du mot de reveil
+        run: |
+          curl -L -o /tmp/model.zip https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
+          unzip -q /tmp/model.zip -d /tmp/model
+          mkdir -p jarvis/app/src/main/assets
+          mv /tmp/model/vosk-model-small-en-us-0.15 jarvis/app/src/main/assets/model-en
+          date +%s > jarvis/app/src/main/assets/model-en/uuid
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
